@@ -110,11 +110,12 @@ a:hover {
 }
 
 .brand-logo {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  object-fit: cover;
-  box-shadow: 0 0 24px rgba(125, 211, 240, 0.18);
+  width: 40px;
+  height: 40px;
+  border-radius: 9px;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  background: #0e141e;
 }
 
 .brand-copy {

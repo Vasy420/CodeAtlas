@@ -109,7 +109,7 @@ function ProgressView({ project }: { project: Project }) {
     <div className="progress-page">
       <div className="splash-mark" style={{ width: 96, height: 96, marginBottom: 16 }}>
         <span className="splash-ring" aria-hidden="true" />
-        <img src="/logo.png" alt="" width={72} height={72} style={{ width: 72, height: 72, borderRadius: 16 }} />
+        <img src="/logo.svg" alt="" width={72} height={72} style={{ width: 72, height: 72, borderRadius: 16 }} />
       </div>
       <div className="kicker">Pipeline</div>
       <h2 style={{ fontFamily: "var(--serif)", fontSize: 40, margin: "8px 0 12px" }}>
