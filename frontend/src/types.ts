@@ -63,13 +63,36 @@ export interface Briefing {
   entry_points: GraphNode[];
   reading_path: GraphNode[];
   high_coupling: { id: string; path: string; name: string; degree: number; dependents: number }[];
+  structure: StructureNode[];
+  external_deps: { id: string; name: string; used_by: number; files: string[] }[];
+  continue_guide: {
+    start_here: string[];
+    read_next: string[];
+    change_carefully: string[];
+    install_or_know: string[];
+  };
   warnings: string[];
+}
+
+export interface StructureNode {
+  kind: "dir" | "file";
+  name: string;
+  path?: string;
+  id?: string;
+  language?: string;
+  children: StructureNode[];
 }
 
 export interface ImpactResult {
   seed: { id: string; name: string; kind: string; path: string; qualified_name: string };
   depth: number;
-  summary: { affected_nodes: number; affected_files: number; affected_communities: number };
+  summary: {
+    affected_nodes: number;
+    affected_files: number;
+    affected_communities: number;
+    risk?: string;
+    note?: string;
+  };
   affected: Array<GraphNode & { distance: number; relation?: string; confidence?: string }>;
   nodes: GraphNode[];
   edges: GraphEdge[];

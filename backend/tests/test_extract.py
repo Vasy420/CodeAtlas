@@ -66,3 +66,28 @@ def test_god_nodes_include_session_or_db():
     result = analyze_tree(NORTHSTAR)
     gods = [g["path"] for g in result["metrics"]["god_nodes"]]
     assert "auth/session.py" in gods or "db.py" in gods
+
+
+def test_briefing_covers_structure_deps_and_onboarding():
+    result = analyze_tree(NORTHSTAR)
+    briefing = result["briefing"]
+    names = _flatten_tree_names(briefing["structure"])
+    assert "auth" in names
+    assert "orders" in names
+    ext = {row["name"] for row in briefing["external_deps"]}
+    assert "flask" in ext
+    guide = briefing["continue_guide"]
+    assert guide["start_here"]
+    assert guide["read_next"]
+    assert briefing["high_coupling"]
+    impact = compute_impact(result["graph"], "file:auth/session.py", depth=3)
+    assert impact["summary"]["risk"] in {"low", "medium", "high"}
+    assert "affect" in impact["summary"]["note"]
+
+
+def _flatten_tree_names(nodes: list) -> set[str]:
+    found: set[str] = set()
+    for node in nodes:
+        found.add(node["name"])
+        found |= _flatten_tree_names(node.get("children") or [])
+    return found

@@ -126,6 +126,8 @@ def compute_impact(
             "affected_nodes": len(affected),
             "affected_files": len(files),
             "affected_communities": len(communities),
+            "risk": _risk_level(len(files), len(communities)),
+            "note": _risk_note(seed_data.get("path") or seed, len(files), len(communities)),
         },
         "affected": affected,
         "nodes": [
@@ -139,3 +141,20 @@ def compute_impact(
         ],
         "edges": subgraph_edges,
     }
+
+
+def _risk_level(file_count: int, cluster_count: int) -> str:
+    if file_count <= 2 and cluster_count <= 1:
+        return "low"
+    if file_count <= 6:
+        return "medium"
+    return "high"
+
+
+def _risk_note(path: str, file_count: int, cluster_count: int) -> str:
+    if file_count == 0:
+        return f"No in-repo dependents found for {path}."
+    return (
+        f"Changing {path} can affect {file_count} file(s) across {cluster_count} cluster(s). "
+        "Review those dependents before editing."
+    )

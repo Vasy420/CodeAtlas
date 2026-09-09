@@ -5,7 +5,7 @@ import { api } from "../api";
 import { Brand } from "../components/Brand";
 import { GraphCanvas } from "../components/GraphCanvas";
 import { LoadingScreen } from "../components/LoadingScreen";
-import type { Briefing, GraphEdge, GraphNode, ImpactResult, Project } from "../types";
+import type { Briefing, GraphEdge, GraphNode, ImpactResult, Project, StructureNode } from "../types";
 
 const STAGES = ["ingest", "walk", "extract", "graph", "briefing", "ready"];
 
@@ -219,7 +219,100 @@ function BriefingView({
           {project.file_count} files analysed · click a row to simulate impact
         </p>
       </div>
+
+      <div className="grid-2" style={{ marginTop: 16 }}>
+        <div className="panel">
+          <h2>Repository structure</h2>
+          <ul className="tree">
+            {(briefing.structure || []).map((node) => (
+              <TreeNode key={node.path || node.name} node={node} onOpen={onOpen} />
+            ))}
+          </ul>
+        </div>
+        <div className="panel">
+          <h2>Continue this project</h2>
+          <p className="hint">Use this when taking over or maintaining the repo.</p>
+          <p className="meta">Entry points</p>
+          <ul className="list">
+            {(briefing.continue_guide?.start_here || []).map((path) => (
+              <li key={path} className="path">{path}</li>
+            ))}
+          </ul>
+          <p className="meta">Change carefully</p>
+          <ul className="list">
+            {(briefing.continue_guide?.change_carefully || []).map((path) => (
+              <li key={path} className="path">{path}</li>
+            ))}
+          </ul>
+          <p className="meta">External packages</p>
+          <ul className="list">
+            {(briefing.external_deps || []).slice(0, 10).map((dep) => (
+              <li key={dep.id}>
+                <strong>{dep.name}</strong>
+                <div className="meta">imported by {dep.used_by} file{dep.used_by === 1 ? "" : "s"}</div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      {(briefing.high_coupling || []).length > 0 && (
+        <div className="panel" style={{ marginTop: 16 }}>
+          <h2>Tightly coupled files</h2>
+          <p className="hint">High in + out degree. Refactors here tend to ripple.</p>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Path</th>
+                <th>Degree</th>
+                <th>Dependents</th>
+              </tr>
+            </thead>
+            <tbody>
+              {briefing.high_coupling.map((n) => (
+                <tr key={n.id} onClick={() => onOpen(n.id)}>
+                  <td className="path">{n.path}</td>
+                  <td>{n.degree}</td>
+                  <td>{n.dependents}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
+  );
+}
+
+function TreeNode({
+  node,
+  onOpen,
+}: {
+  node: StructureNode;
+  onOpen: (seed: string) => void;
+}) {
+  if (node.kind === "dir") {
+    return (
+      <li>
+        <div className="tree-dir">{node.name}/</div>
+        <ul className="tree">
+          {node.children.map((child) => (
+            <TreeNode key={child.path || `${node.name}/${child.name}`} node={child} onOpen={onOpen} />
+          ))}
+        </ul>
+      </li>
+    );
+  }
+  return (
+    <li>
+      {node.id ? (
+        <button type="button" onClick={() => onOpen(node.id!)}>
+          <span className="path">{node.name}</span>
+        </button>
+      ) : (
+        <span className="path">{node.name}</span>
+      )}
+    </li>
   );
 }
 
@@ -369,7 +462,7 @@ function ImpactView({ projectId, initialSeed }: { projectId: string; initialSeed
       <h2 style={{ fontFamily: "var(--serif)", fontSize: 36, margin: "8px 0 8px" }}>
         Blast radius
       </h2>
-      <p className="lede">Pick a file. ORION walks reverse dependencies to show what would feel the change.</p>
+      <p className="lede">Pick a file. CodeAtlas walks reverse dependencies to show what would feel the change.</p>
       <div className="impact-head">
         <div style={{ flex: 1, minWidth: 220 }}>
           <input
@@ -431,10 +524,11 @@ function ImpactView({ projectId, initialSeed }: { projectId: string; initialSeed
               <span>clusters</span>
             </div>
             <div className="stat">
-              <b>{result.seed.path}</b>
-              <span>seed</span>
+              <b>{result.summary.risk || "—"}</b>
+              <span>risk</span>
             </div>
           </div>
+          {result.summary.note && <p className="lede">{result.summary.note}</p>}
           <div className="map-wrap">
             <div className="graph-stage">
               <GraphCanvas
@@ -456,6 +550,7 @@ function ImpactView({ projectId, initialSeed }: { projectId: string; initialSeed
                     <th>Dist</th>
                     <th>Symbol</th>
                     <th>Via</th>
+                    <th>Confidence</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -468,6 +563,7 @@ function ImpactView({ projectId, initialSeed }: { projectId: string; initialSeed
                         <td>
                           <span className="badge">{n.relation || "dep"}</span>
                         </td>
+                        <td className="meta">{n.confidence || "extracted"}</td>
                       </tr>
                     ))}
                 </tbody>
