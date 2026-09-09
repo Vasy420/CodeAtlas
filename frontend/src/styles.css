@@ -406,6 +406,52 @@ a:hover {
 .page {
   padding: 28px;
   overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(143, 151, 168, 0.4) transparent;
+}
+
+.arch-pane::-webkit-scrollbar,
+.inspector::-webkit-scrollbar,
+.page::-webkit-scrollbar,
+.sidenav::-webkit-scrollbar,
+.table-wrap::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.arch-pane::-webkit-scrollbar-track,
+.inspector::-webkit-scrollbar-track,
+.page::-webkit-scrollbar-track,
+.sidenav::-webkit-scrollbar-track,
+.table-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.arch-pane::-webkit-scrollbar-thumb,
+.inspector::-webkit-scrollbar-thumb,
+.page::-webkit-scrollbar-thumb,
+.sidenav::-webkit-scrollbar-thumb,
+.table-wrap::-webkit-scrollbar-thumb {
+  background: rgba(143, 151, 168, 0.35);
+  border-radius: 99px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.arch-pane::-webkit-scrollbar-thumb:hover,
+.inspector::-webkit-scrollbar-thumb:hover,
+.page::-webkit-scrollbar-thumb:hover,
+.sidenav::-webkit-scrollbar-thumb:hover,
+.table-wrap::-webkit-scrollbar-thumb:hover {
+  background: rgba(125, 211, 240, 0.45);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.arch-pane::-webkit-scrollbar-corner,
+.inspector::-webkit-scrollbar-corner,
+.page::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .stats {
@@ -514,12 +560,15 @@ a:hover {
 }
 
 .arch-pane {
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: #121826;
   color: var(--text);
   padding: 14px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(143, 151, 168, 0.4) transparent;
 }
 
 .inspector-head {
@@ -572,12 +621,15 @@ a:hover {
 }
 
 .inspector {
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: #121826;
   color: var(--text);
   padding: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(143, 151, 168, 0.4) transparent;
 }
 
 .inspector.open {
@@ -608,8 +660,7 @@ a:hover {
   font-size: 14px;
 }
 
-.panel,
-.inspector {
+.panel {
   overflow-x: auto;
 }
 
