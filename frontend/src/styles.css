@@ -860,6 +860,88 @@ a:hover {
   height: auto;
 }
 
+.hero-track {
+  perspective: 900px;
+  cursor: pointer;
+  outline: none;
+  overflow: hidden;
+  border-radius: 18px;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.hero-track:focus-visible {
+  box-shadow: 0 0 0 2px var(--cyan-dim);
+}
+
+.hero-track-inner {
+  position: relative;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.hero-track-inner img {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-spot {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+}
+
+.hero-bead {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 3;
+  width: 32px;
+  height: 32px;
+  margin: -16px 0 0 -16px;
+  border-radius: 50%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background: radial-gradient(circle, rgba(255, 252, 240, 0.55) 0%, rgba(125, 211, 240, 0) 70%);
+}
+
+.hero-shutter {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: #07090f;
+  opacity: 0;
+}
+
+.hero-shutter.on {
+  animation: hero-shutter 0.52s ease-in-out forwards;
+}
+
+@keyframes hero-shutter {
+  0% {
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.72;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-track-inner,
+  .hero-track-inner img,
+  .hero-bead {
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
 .band {
   max-width: 1120px;
   margin: 0 auto;
