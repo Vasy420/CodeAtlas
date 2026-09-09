@@ -94,21 +94,41 @@ git commit -m "ORION: repository cartography MVP"
 gh repo create orion-analyzer --private --source=. --remote=origin --push
 ```
 
-### 1. Render — API
+### 1. Render — Web Service (not Blueprint)
 
-1. [dashboard.render.com](https://dashboard.render.com) → **New** → **Blueprint** and pick this repo  
-   (or **New Web Service**, connect the repo, Root Directory `backend`)
-2. Render should pick up `render.yaml`. Confirm:
-   - **Root Directory:** `backend`
-   - **Build:** `pip install -r requirements.txt`
-   - **Start:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-   - **Health check:** `/api/health`
-3. Deploy. Copy the URL, e.g. `https://orion-api.onrender.com`
-4. Open that URL at `/api/health` — you want `{"ok": true, "name": "ORION"}`
+In the Render dashboard choose **New → Web Service**. Do **not** use Blueprint.
+
+Connect `Vasy420/CodeAtlas`, then fill the form **exactly** like this:
+
+| Field | Value |
+|---|---|
+| **Name** | `codeatlas-api` (any name is fine) |
+| **Language** | Python 3 |
+| **Branch** | `main` |
+| **Root Directory** | `backend` |
+| **Build Command** | `pip install -r requirements.txt` |
+| **Start Command** | `python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+| **Instance type** | Free |
+
+Environment variables (optional but recommended):
+
+| Key | Value |
+|---|---|
+| `PYTHON_VERSION` | `3.12.8` |
+
+After the first deploy: **Settings → Health Check Path** → `/api/health`
+
+Click **Deploy Web Service**. When it is live, open:
+
+`https://YOUR-SERVICE.onrender.com/api/health`
+
+You want `{"ok": true, "name": "ORION"}`. Copy that base URL for Vercel as `VITE_API_URL`.
+
+If the build fails with “Could not find app”, the Root Directory is wrong — it must be `backend`, not blank.
 
 Free Render web services sleep after idle. The first request after sleep takes ~30s.
 
-SQLite lives on the instance disk. On the free plan that disk is **ephemeral** (analyses vanish on restart). That is fine for a demo. For a persistent disk: Render → service → Disks → mount at `/opt/render/project/src/data`.
+SQLite lives on the instance disk. On the free plan that disk is **ephemeral** (analyses vanish on restart). That is fine for a demo.
 
 ### 2. Vercel — UI
 
