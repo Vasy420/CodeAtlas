@@ -1,17 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Map, Orbit, Radar, X } from "lucide-react";
+import { NavLink, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Map, Orbit, Radar } from "lucide-react";
 import { api } from "../api";
 import { Brand } from "../components/Brand";
 import { GraphCanvas } from "../components/GraphCanvas";
 import { LoadingScreen } from "../components/LoadingScreen";
 import type { Briefing, GraphEdge, GraphNode, ImpactResult, Project } from "../types";
 
-const TABS = [
-  { id: "briefing", label: "Overview", icon: Orbit },
-  { id: "map", label: "Map", icon: Map },
-  { id: "impact", label: "Impact", icon: Radar },
-] as const;
+const STAGES = ["ingest", "walk", "extract", "graph", "briefing", "ready"];
 
 export function ProjectPage() {
   const { id = "" } = useParams();
@@ -51,67 +47,59 @@ export function ProjectPage() {
     return (
       <div className="content page">
         <p className="error">{error}</p>
-        <button className="btn ghost" onClick={() => nav("/app")}>
-          Back to workspace
+        <button className="btn ghost" onClick={() => nav("/")}>
+          Back
         </button>
       </div>
     );
   }
 
   if (!project) {
-    return <LoadingScreen label="Loading project…" />;
+    return <LoadingScreen label="Acquiring target…" />;
   }
 
   const ready = project.status === "ready";
 
   return (
-    <div className="content project-shell">
+    <div className="content">
       <header className="topbar">
-        <Brand to="/app" />
-        <div className="crumb">
-          <Link to="/app">Workspace</Link>
-          <span aria-hidden="true">/</span>
-          <strong>{project.name}</strong>
-        </div>
+        <Brand />
         <span className={`badge ${project.status === "failed" ? "rose" : ready ? "ok" : "cyan"}`}>
           {project.status}
         </span>
       </header>
-
-      <nav className="tabs" aria-label="Project sections">
-        {TABS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={tab === item.id ? "active" : ""}
-            onClick={() => setParams({ tab: item.id })}
-          >
-            <item.icon size={16} />
-            {item.label}
-          </button>
-        ))}
-      </nav>
-
-      <main className="page">
-        {!ready && <ProgressView project={project} />}
-        {project.status === "failed" && <p className="error">{project.error || "Analysis failed"}</p>}
-        {ready && tab === "briefing" && briefing && (
-          <BriefingView
-            project={project}
-            briefing={briefing}
-            onOpen={(seed) => setParams({ tab: "impact", seed })}
-            onMap={() => setParams({ tab: "map" })}
-          />
-        )}
-        {ready && tab === "map" && <MapView projectId={id} />}
-        {ready && tab === "impact" && (
-          <ImpactView
-            projectId={id}
-            initialSeed={params.get("seed")}
-            suggestions={briefing?.god_nodes ?? []}
-          />
-        )}
-      </main>
+      <div className="project-layout">
+        <aside className="sidenav">
+          <h1 className="proj-name">{project.name}</h1>
+          <div className="meta">{project.source_type}</div>
+          <nav className="nav-links">
+            <NavLink className={tab === "briefing" ? "active" : ""} to={`?tab=briefing`}>
+              <Orbit size={16} /> Briefing
+            </NavLink>
+            <NavLink className={tab === "map" ? "active" : ""} to={`?tab=map`}>
+              <Map size={16} /> Map
+            </NavLink>
+            <NavLink className={tab === "impact" ? "active" : ""} to={`?tab=impact`}>
+              <Radar size={16} /> Impact
+            </NavLink>
+          </nav>
+        </aside>
+        <main className="page">
+          {!ready && <ProgressView project={project} />}
+          {project.status === "failed" && (
+            <p className="error">{project.error || "Analysis failed"}</p>
+          )}
+          {ready && tab === "briefing" && briefing && (
+            <BriefingView project={project} briefing={briefing} onOpen={(seed) => {
+              setParams({ tab: "impact", seed });
+            }} />
+          )}
+          {ready && tab === "map" && <MapView projectId={id} />}
+          {ready && tab === "impact" && (
+            <ImpactView projectId={id} initialSeed={params.get("seed")} />
+          )}
+        </main>
+      </div>
     </div>
   );
 }
@@ -119,17 +107,23 @@ export function ProjectPage() {
 function ProgressView({ project }: { project: Project }) {
   return (
     <div className="progress-page">
-      <p className="kicker">Analysis</p>
-      <h2 className="product-h2">Mapping {project.name}</h2>
+      <div className="splash-mark" style={{ width: 96, height: 96, marginBottom: 16 }}>
+        <span className="splash-ring" aria-hidden="true" />
+        <img src="/logo.png" alt="" width={72} height={72} style={{ width: 72, height: 72, borderRadius: 16 }} />
+      </div>
+      <div className="kicker">Pipeline</div>
+      <h2 style={{ fontFamily: "var(--serif)", fontSize: 40, margin: "8px 0 12px" }}>
+        Charting {project.name}
+      </h2>
       <div className="stage-pills">
-        {["ingest", "walk", "extract", "graph", "briefing", "ready"].map((s) => (
-          <span key={s} className={`pill ${project.stage === s ? "on" : ""}`}>
+        {STAGES.map((s) => (
+          <span key={s} className={`pill ${project.stage === s || (project.stage === "ready" && s === "ready") ? "on" : ""}`}>
             {s}
           </span>
         ))}
       </div>
       <div className="log">
-        <pre>{project.log || "Waiting for the first log line…"}</pre>
+        <pre>{project.log || "Waiting for the first instrument reading…"}</pre>
       </div>
     </div>
   );
@@ -139,25 +133,18 @@ function BriefingView({
   project,
   briefing,
   onOpen,
-  onMap,
 }: {
   project: Project;
   briefing: Briefing;
   onOpen: (seed: string) => void;
-  onMap: () => void;
 }) {
   return (
-    <div className="overview">
-      <div className="overview-head">
-        <div>
-          <p className="kicker">Overview</p>
-          <h1>{project.name}</h1>
-          <p className="lede">{briefing.summary}</p>
-        </div>
-        <button className="btn ghost" type="button" onClick={onMap}>
-          Open map
-        </button>
-      </div>
+    <div>
+      <div className="kicker">Onboarding briefing</div>
+      <h2 style={{ fontFamily: "var(--serif)", fontSize: 42, margin: "8px 0 12px" }}>
+        Where to start
+      </h2>
+      <p className="lede">{briefing.summary}</p>
       <div className="stats">
         <div className="stat">
           <b>{briefing.stats.files}</b>
@@ -178,14 +165,14 @@ function BriefingView({
       </div>
       <div className="grid-2">
         <div className="panel">
-          <h2>Start here</h2>
+          <h2>Read these first</h2>
           <ul className="list">
             {briefing.reading_path.map((n) => (
               <li key={n.id}>
-                <button type="button" onClick={() => onOpen(n.id)}>
+                <button onClick={() => onOpen(n.id)}>
                   <div className="path">{n.path}</div>
                   <div className="meta">
-                    {n.language} · {n.dependents ?? 0} dependents · trace impact
+                    {n.language} · {n.dependents ?? 0} dependents
                   </div>
                 </button>
               </li>
@@ -204,29 +191,29 @@ function BriefingView({
           </ul>
         </div>
       </div>
-      <div className="panel">
-        <h2>High fan-in files</h2>
-        <p className="hint">Changes here tend to spread. Tap a row to run impact.</p>
-        <div className="table-wrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Path</th>
-                <th>Dependents</th>
-                <th>LOC</th>
+      <div className="panel" style={{ marginTop: 16 }}>
+        <h2>God nodes — high fan-in, change with care</h2>
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Path</th>
+              <th>Dependents</th>
+              <th>LOC</th>
+            </tr>
+          </thead>
+          <tbody>
+            {briefing.god_nodes.map((n) => (
+              <tr key={n.id} onClick={() => onOpen(n.id)}>
+                <td className="path">{n.path}</td>
+                <td>{n.dependents}</td>
+                <td>{n.loc}</td>
               </tr>
-            </thead>
-            <tbody>
-              {briefing.god_nodes.map((n) => (
-                <tr key={n.id} onClick={() => onOpen(n.id)}>
-                  <td className="path">{n.path}</td>
-                  <td>{n.dependents}</td>
-                  <td>{n.loc}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
+        <p className="hint">
+          {project.file_count} files analysed · click a row to simulate impact
+        </p>
       </div>
     </div>
   );
@@ -241,44 +228,31 @@ function MapView({ projectId }: { projectId: string }) {
   const [kind, setKind] = useState("file");
 
   useEffect(() => {
-    api
-      .graph(projectId, kind)
-      .then((g) => {
-        const capped = [...g.nodes].sort((a, b) => b.pagerank - a.pagerank).slice(0, 400);
-        const keys = new Set(capped.map((n) => n.id));
-        setNodes(capped);
-        setEdges(g.edges.filter((e) => keys.has(e.source) && keys.has(e.target)));
-      })
-      .catch(() => undefined);
+    api.graph(projectId, kind).then((g) => {
+      const capped = [...g.nodes].sort((a, b) => b.pagerank - a.pagerank).slice(0, 400);
+      const keys = new Set(capped.map((n) => n.id));
+      setNodes(capped);
+      setEdges(g.edges.filter((e) => keys.has(e.source) && keys.has(e.target)));
+    }).catch(() => undefined);
   }, [projectId, kind]);
 
   useEffect(() => {
-    if (!selected) {
-      setDetail(null);
-      return;
-    }
+    if (!selected) return;
     api.node(projectId, selected).then(setDetail).catch(() => setDetail(null));
   }, [projectId, selected]);
 
   const filteredHighlight = useMemo(() => {
     if (!q.trim()) return undefined;
     const needle = q.toLowerCase();
-    return new Set(
-      nodes
-        .filter((n) => n.path.toLowerCase().includes(needle) || n.name.toLowerCase().includes(needle))
-        .map((n) => n.id),
-    );
+    return new Set(nodes.filter((n) => n.path.toLowerCase().includes(needle) || n.name.toLowerCase().includes(needle)).map((n) => n.id));
   }, [q, nodes]);
 
   return (
     <div>
-      <div className="view-head">
-        <div>
-          <p className="kicker">Map</p>
-          <h1>Architecture</h1>
-          <p className="hint">Drag to pan, scroll to zoom, tap a node for details.</p>
-        </div>
-      </div>
+      <div className="kicker">Architecture map</div>
+      <h2 style={{ fontFamily: "var(--serif)", fontSize: 36, margin: "8px 0 16px" }}>
+        Clusters and gravity
+      </h2>
       <div className="map-wrap">
         <div className="graph-stage">
           <div className="toolbar">
@@ -302,47 +276,35 @@ function MapView({ projectId }: { projectId: string }) {
             onSelect={setSelected}
           />
         </div>
-        <aside className={`inspector ${detail ? "open" : ""}`}>
-          <div className="inspector-head">
-            <h2>Inspector</h2>
-            {detail && (
-              <button className="icon-btn" type="button" aria-label="Close inspector" onClick={() => setSelected(null)}>
-                <X size={18} />
-              </button>
-            )}
-          </div>
-          {!detail && <p className="empty">Select a node on the map.</p>}
+        <aside className="inspector">
+          {!detail && <p className="empty">Select a star to inspect it.</p>}
           {detail && (
             <>
               <span className="badge cyan">{detail.node.kind}</span>
               <h3 className="path">{detail.node.path || detail.node.qualified_name}</h3>
               <p className="meta">
-                {detail.node.language} · {detail.node.dependents} dependents · {detail.node.loc} loc
+                {detail.node.language} · {detail.node.dependents} dependents · loc {detail.node.loc}
               </p>
               {detail.snippet && <pre className="snippet">{detail.snippet.text}</pre>}
-              <h2>Uses</h2>
+              <h2 style={{ marginTop: 16 }}>Imports / uses</h2>
               <ul className="list">
-                {detail.outgoing
-                  .filter((e) => e.relation !== "contains")
-                  .map((e, i) => (
-                    <li key={i}>
-                      <button type="button" onClick={() => setSelected(e.target)}>
-                        <span className="badge">{e.relation}</span> {e.target}
-                      </button>
-                    </li>
-                  ))}
+                {detail.outgoing.filter((e) => e.relation !== "contains").map((e, i) => (
+                  <li key={i}>
+                    <button onClick={() => setSelected(e.target)}>
+                      <span className="badge">{e.relation}</span> {e.target}
+                    </button>
+                  </li>
+                ))}
               </ul>
-              <h2>Used by</h2>
+              <h2>Dependents</h2>
               <ul className="list">
-                {detail.incoming
-                  .filter((e) => e.relation !== "contains")
-                  .map((e, i) => (
-                    <li key={i}>
-                      <button type="button" onClick={() => setSelected(e.source)}>
-                        <span className="badge">{e.relation}</span> {e.source}
-                      </button>
-                    </li>
-                  ))}
+                {detail.incoming.filter((e) => e.relation !== "contains").map((e, i) => (
+                  <li key={i}>
+                    <button onClick={() => setSelected(e.source)}>
+                      <span className="badge">{e.relation}</span> {e.source}
+                    </button>
+                  </li>
+                ))}
               </ul>
             </>
           )}
@@ -352,15 +314,7 @@ function MapView({ projectId }: { projectId: string }) {
   );
 }
 
-function ImpactView({
-  projectId,
-  initialSeed,
-  suggestions,
-}: {
-  projectId: string;
-  initialSeed: string | null;
-  suggestions: GraphNode[];
-}) {
+function ImpactView({ projectId, initialSeed }: { projectId: string; initialSeed: string | null }) {
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<GraphNode[]>([]);
   const [seed, setSeed] = useState(initialSeed || "");
@@ -393,19 +347,11 @@ function ImpactView({
     try {
       const r = await api.impact(projectId, seedId, d);
       setResult(r);
-      setQuery(r.seed.path);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Impact failed");
     } finally {
       setBusy(false);
     }
-  };
-
-  const pick = (id: string, path: string) => {
-    setSeed(id);
-    setQuery(path);
-    setHits([]);
-    void run(id, depth);
   };
 
   const highlight = useMemo(() => {
@@ -415,27 +361,32 @@ function ImpactView({
 
   return (
     <div>
-      <div className="view-head">
-        <div>
-          <p className="kicker">Impact</p>
-          <h1>Blast radius</h1>
-          <p className="lede">Choose a file. The walk follows reverse imports and calls.</p>
-        </div>
-      </div>
+      <div className="kicker">Change impact</div>
+      <h2 style={{ fontFamily: "var(--serif)", fontSize: 36, margin: "8px 0 8px" }}>
+        Blast radius
+      </h2>
+      <p className="lede">Pick a file. ORION walks reverse dependencies to show what would feel the change.</p>
       <div className="impact-head">
-        <div className="search-box">
+        <div style={{ flex: 1, minWidth: 220 }}>
           <input
             className="field"
             value={query}
             onChange={(e) => void search(e.target.value)}
-            placeholder="Search a file path"
+            placeholder="Search files — try session.py"
             aria-label="Search seed file"
           />
           {hits.length > 0 && (
-            <ul className="list suggest">
+            <ul className="list">
               {hits.slice(0, 8).map((n) => (
                 <li key={n.id}>
-                  <button type="button" onClick={() => pick(n.id, n.path)}>
+                  <button
+                    onClick={() => {
+                      setSeed(n.id);
+                      setQuery(n.path);
+                      setHits([]);
+                      void run(n.id, depth);
+                    }}
+                  >
                     <span className="path">{n.path}</span>
                   </button>
                 </li>
@@ -443,27 +394,22 @@ function ImpactView({
             </ul>
           )}
         </div>
-        <div className="depth-seg" role="group" aria-label="Walk depth">
-          {[1, 2, 3, 4].map((d) => (
-            <button key={d} type="button" className={depth === d ? "on" : ""} onClick={() => setDepth(d)}>
-              {d}
-            </button>
-          ))}
-        </div>
+        <label className="meta">
+          Depth
+          <input
+            className="field"
+            type="number"
+            min={1}
+            max={8}
+            value={depth}
+            onChange={(e) => setDepth(Number(e.target.value))}
+            style={{ width: 80, marginLeft: 8 }}
+          />
+        </label>
         <button className="btn" disabled={!seed || busy} onClick={() => void run(seed, depth)}>
-          {busy ? "Tracing…" : "Trace"}
+          Trace impact
         </button>
       </div>
-      {suggestions.length > 0 && !result && (
-        <div className="chips">
-          <span className="meta">Suggested</span>
-          {suggestions.slice(0, 6).map((n) => (
-            <button key={n.id} type="button" className="chip" onClick={() => pick(n.id, n.path)}>
-              {n.path}
-            </button>
-          ))}
-        </div>
-      )}
       {error && <p className="error">{error}</p>}
       {result && (
         <>
@@ -480,6 +426,10 @@ function ImpactView({
               <b>{result.summary.affected_communities}</b>
               <span>clusters</span>
             </div>
+            <div className="stat">
+              <b>{result.seed.path}</b>
+              <span>seed</span>
+            </div>
           </div>
           <div className="map-wrap">
             <div className="graph-stage">
@@ -489,37 +439,35 @@ function ImpactView({
                 selected={result.seed.id}
                 highlight={highlight}
                 onSelect={(id) => {
-                  const node = result.nodes.find((n) => n.id === id);
-                  if (node) pick(id, node.path);
+                  setSeed(id);
+                  void run(id, depth);
                 }}
               />
             </div>
-            <aside className="inspector open">
-              <h2>Affected files</h2>
-              <div className="table-wrap">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Dist</th>
-                      <th>Path</th>
-                      <th>Via</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.affected
-                      .filter((n) => n.kind === "file")
-                      .map((n) => (
-                        <tr key={n.id} onClick={() => pick(n.id, n.path)}>
-                          <td>{n.distance}</td>
-                          <td className="path">{n.path}</td>
-                          <td>
-                            <span className="badge">{n.relation || "dep"}</span>
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
+            <aside className="inspector">
+              <h2>Affected</h2>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Dist</th>
+                    <th>Symbol</th>
+                    <th>Via</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.affected
+                    .filter((n) => n.kind === "file")
+                    .map((n) => (
+                      <tr key={n.id} onClick={() => void run(n.id, depth)}>
+                        <td>{n.distance}</td>
+                        <td className="path">{n.path}</td>
+                        <td>
+                          <span className="badge">{n.relation || "dep"}</span>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
             </aside>
           </div>
         </>
