@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { Starfield } from "./components/Starfield";
 import { LoadingScreen } from "./components/LoadingScreen";
+import { AppHome } from "./pages/AppHome";
 import { Home } from "./pages/Home";
 import { ProjectPage } from "./pages/ProjectPage";
 
@@ -22,6 +23,7 @@ export default function App() {
       {booting && <LoadingScreen label="Aligning the catalog…" />}
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/app" element={<AppHome />} />
         <Route path="/projects/:id" element={<ProjectPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

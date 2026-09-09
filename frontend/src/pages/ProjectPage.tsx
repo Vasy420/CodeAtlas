@@ -47,7 +47,7 @@ export function ProjectPage() {
     return (
       <div className="content page">
         <p className="error">{error}</p>
-        <button className="btn ghost" onClick={() => nav("/")}>
+        <button className="btn ghost" onClick={() => nav("/app")}>
           Back
         </button>
       </div>
@@ -63,7 +63,7 @@ export function ProjectPage() {
   return (
     <div className="content">
       <header className="topbar">
-        <Brand />
+        <Brand to="/app" />
         <span className={`badge ${project.status === "failed" ? "rose" : ready ? "ok" : "cyan"}`}>
           {project.status}
         </span>
