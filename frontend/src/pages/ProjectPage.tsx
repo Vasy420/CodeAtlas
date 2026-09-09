@@ -98,7 +98,7 @@ export function ProjectPage() {
               setParams({ tab: "impact", seed });
             }} />
           )}
-          {ready && tab === "map" && <MapView projectId={id} />}
+          {ready && tab === "map" && <MapView projectId={id} briefing={briefing} />}
           {ready && tab === "impact" && (
             <ImpactView projectId={id} initialSeed={params.get("seed")} />
           )}
@@ -316,13 +316,18 @@ function TreeNode({
   );
 }
 
-function MapView({ projectId }: { projectId: string }) {
+function MapView({ projectId, briefing }: { projectId: string; briefing: Briefing | null }) {
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [edges, setEdges] = useState<GraphEdge[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<Awaited<ReturnType<typeof api.node>> | null>(null);
   const [q, setQ] = useState("");
   const [kind, setKind] = useState("file");
+  const clusterLabels = useMemo(() => {
+    const labels: Record<number, string> = {};
+    for (const c of briefing?.clusters || []) labels[c.id] = c.label;
+    return labels;
+  }, [briefing]);
 
   useEffect(() => {
     api.graph(projectId, kind).then((g) => {
@@ -348,9 +353,33 @@ function MapView({ projectId }: { projectId: string }) {
     <div>
       <div className="kicker">Architecture map</div>
       <h2 style={{ fontFamily: "var(--serif)", fontSize: 36, margin: "8px 0 16px" }}>
-        Clusters and gravity
+        Structure and clusters
       </h2>
-      <div className="map-wrap">
+      <div className="map-wrap map-wrap-arch">
+        <aside className="arch-pane">
+          <h2>Clusters</h2>
+          <ul className="list">
+            {(briefing?.clusters || []).map((c) => (
+              <li key={c.id}>
+                <strong>{c.label}</strong>
+                <div className="meta">{c.file_count} files · {c.files.slice(0, 3).join(", ")}</div>
+              </li>
+            ))}
+            {(briefing?.clusters || []).length === 0 && (
+              <li className="empty">No clusters yet. Re-run analysis if this is an old map.</li>
+            )}
+          </ul>
+          <h2>Folders</h2>
+          <ul className="tree">
+            {(briefing?.structure || []).map((node) => (
+              <TreeNode
+                key={node.path || node.name}
+                node={node}
+                onOpen={(id) => setSelected(id)}
+              />
+            ))}
+          </ul>
+        </aside>
         <div className="graph-stage">
           <div className="toolbar">
             <input
@@ -370,11 +399,12 @@ function MapView({ projectId }: { projectId: string }) {
             edges={edges.filter((e) => e.relation !== "contains" || kind !== "file")}
             selected={selected}
             highlight={filteredHighlight}
+            clusterLabels={clusterLabels}
             onSelect={setSelected}
           />
         </div>
         <aside className="inspector">
-          {!detail && <p className="empty">Select a star to inspect it.</p>}
+          {!detail && <p className="empty">Select a file in the tree or on the map.</p>}
           {detail && (
             <>
               <span className="badge cyan">{detail.node.kind}</span>

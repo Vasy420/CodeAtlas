@@ -3,24 +3,54 @@ import type { GraphEdge, GraphNode } from "../types";
 
 const PALETTE = ["#7dd3f0", "#e8b86d", "#c4b5fd", "#86c5a6", "#f9a8d4", "#93c5fd", "#fdba74", "#a5b4fc"];
 
-type SimNode = GraphNode & { x: number; y: number; vx: number; vy: number };
+type LaidOut = GraphNode & { x: number; y: number };
+
+function layoutNodes(nodes: GraphNode[]): LaidOut[] {
+  const groups = new Map<number, GraphNode[]>();
+  for (const node of nodes) {
+    const cid = node.community_id ?? -1;
+    const list = groups.get(cid) ?? [];
+    list.push(node);
+    groups.set(cid, list);
+  }
+  const keys = [...groups.keys()].sort((a, b) => a - b);
+  const count = Math.max(keys.length, 1);
+  const laid: LaidOut[] = [];
+  keys.forEach((cid, gi) => {
+    const members = groups.get(cid) ?? [];
+    const gx = Math.cos((gi / count) * Math.PI * 2) * (140 + count * 18);
+    const gy = Math.sin((gi / count) * Math.PI * 2) * (110 + count * 14);
+    const ring = 36 + Math.sqrt(members.length) * 16;
+    members.forEach((node, i) => {
+      const angle = members.length === 1 ? 0 : (i / members.length) * Math.PI * 2;
+      laid.push({
+        ...node,
+        x: gx + Math.cos(angle) * ring,
+        y: gy + Math.sin(angle) * ring,
+      });
+    });
+  });
+  return laid;
+}
 
 export function GraphCanvas({
   nodes,
   edges,
   selected,
   highlight,
+  clusterLabels,
   onSelect,
 }: {
   nodes: GraphNode[];
   edges: GraphEdge[];
   selected?: string | null;
   highlight?: Set<string>;
+  clusterLabels?: Record<number, string>;
   onSelect: (id: string) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const sim = useRef<SimNode[]>([]);
-  const camera = useRef({ x: 0, y: 0, k: 1, drag: false, lastX: 0, lastY: 0, grabbed: null as SimNode | null });
+  const laid = useRef<LaidOut[]>([]);
+  const camera = useRef({ x: 0, y: 0, k: 1, drag: false, lastX: 0, lastY: 0 });
   const selectRef = useRef(onSelect);
   selectRef.current = onSelect;
   const selectedRef = useRef(selected);
@@ -29,21 +59,29 @@ export function GraphCanvas({
   highlightRef.current = highlight;
   const edgesRef = useRef(edges);
   edgesRef.current = edges;
+  const labelsRef = useRef(clusterLabels);
+  labelsRef.current = clusterLabels;
+  const paintRef = useRef<() => void>(() => undefined);
 
-  const nodeKey = useMemo(() => nodes.map((n) => n.id).join("|"), [nodes]);
+  const nodeKey = useMemo(
+    () =>
+      nodes
+        .map((n) => n.id)
+        .sort()
+        .join("|"),
+    [nodes],
+  );
 
   useEffect(() => {
-    sim.current = nodes.map((n, i) => {
-      const angle = (i / Math.max(nodes.length, 1)) * Math.PI * 2;
-      const radius = 120 + (n.community_id || 0) * 36;
-      return {
-        ...n,
-        x: Math.cos(angle) * radius,
-        y: Math.sin(angle) * radius,
-        vx: 0,
-        vy: 0,
-      };
+    const prev = new Map(laid.current.map((n) => [n.id, n]));
+    const next = layoutNodes(nodes);
+    laid.current = next.map((n) => {
+      const old = prev.get(n.id);
+      return old ? { ...n, x: old.x, y: old.y } : n;
     });
+    if (prev.size === 0) {
+      camera.current = { x: 0, y: 0, k: 1, drag: false, lastX: 0, lastY: 0 };
+    }
   }, [nodeKey, nodes]);
 
   useEffect(() => {
@@ -51,84 +89,69 @@ export function GraphCanvas({
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let raf = 0;
-    let running = true;
+    let alive = true;
 
-    const resize = () => {
+    const paint = () => {
       const rect = canvas.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = rect.width * dpr;
-      canvas.height = rect.height * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    };
-    resize();
-    window.addEventListener("resize", resize);
-
-    const byId = () => new Map(sim.current.map((n) => [n.id, n]));
-
-    const tick = () => {
-      const rect = canvas.getBoundingClientRect();
-      const { k, x: cx, y: cy } = camera.current;
-      const body = sim.current;
-      const lookup = byId();
-      if (!reduce && body.length) {
-        const n = body.length;
-        for (let i = 0; i < n; i++) {
-          const a = body[i];
-          for (let j = i + 1; j < n; j++) {
-            const b = body[j];
-            let dx = a.x - b.x;
-            let dy = a.y - b.y;
-            const dist2 = dx * dx + dy * dy || 0.01;
-            const same = a.community_id === b.community_id ? 0.65 : 1.2;
-            const force = (3800 * same) / dist2;
-            const dist = Math.sqrt(dist2);
-            dx /= dist;
-            dy /= dist;
-            a.vx += dx * force;
-            a.vy += dy * force;
-            b.vx -= dx * force;
-            b.vy -= dy * force;
-          }
-        }
-        for (const edge of edgesRef.current) {
-          const a = lookup.get(edge.source);
-          const b = lookup.get(edge.target);
-          if (!a || !b) continue;
-          const dx = b.x - a.x;
-          const dy = b.y - a.y;
-          a.vx += dx * 0.01;
-          a.vy += dy * 0.01;
-          b.vx -= dx * 0.01;
-          b.vy -= dy * 0.01;
-        }
-        for (const node of body) {
-          node.vx += -node.x * 0.005;
-          node.vy += -node.y * 0.005;
-          node.vx *= 0.84;
-          node.vy *= 0.84;
-          if (camera.current.grabbed?.id !== node.id) {
-            node.x += node.vx;
-            node.y += node.vy;
-          }
-        }
+      if (rect.width < 8 || rect.height < 8) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.floor(rect.width * dpr);
+      const h = Math.floor(rect.height * dpr);
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
       }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, rect.width, rect.height);
 
+      const { k, x: cx, y: cy } = camera.current;
+      const body = laid.current;
+      const byId = new Map(body.map((n) => [n.id, n]));
       const hi = highlightRef.current;
       const sel = selectedRef.current;
-      ctx.clearRect(0, 0, rect.width, rect.height);
+      const labels = labelsRef.current || {};
+
       ctx.save();
       ctx.translate(rect.width / 2 + cx, rect.height / 2 + cy);
       ctx.scale(k, k);
 
+      const groups = new Map<number, LaidOut[]>();
+      for (const node of body) {
+        const cid = node.community_id ?? -1;
+        const list = groups.get(cid) ?? [];
+        list.push(node);
+        groups.set(cid, list);
+      }
+      for (const [cid, members] of groups) {
+        if (members.length === 0) continue;
+        const mx = members.reduce((s, n) => s + n.x, 0) / members.length;
+        const my = members.reduce((s, n) => s + n.y, 0) / members.length;
+        const radius =
+          Math.max(
+            ...members.map((n) => Math.hypot(n.x - mx, n.y - my)),
+            28,
+          ) + 22;
+        const color = PALETTE[Math.abs(cid) % PALETTE.length];
+        ctx.beginPath();
+        ctx.fillStyle = color + "22";
+        ctx.strokeStyle = color + "66";
+        ctx.lineWidth = 1;
+        ctx.arc(mx, my, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#f1ede4";
+        ctx.font = "12px IBM Plex Sans, sans-serif";
+        ctx.fillText(labels[cid] || `Cluster ${cid}`, mx - 24, my - radius - 6);
+      }
+
       for (const edge of edgesRef.current) {
-        const a = lookup.get(edge.source);
-        const b = lookup.get(edge.target);
+        const a = byId.get(edge.source);
+        const b = byId.get(edge.target);
         if (!a || !b) continue;
         const active = !hi || hi.has(a.id) || hi.has(b.id);
-        ctx.strokeStyle = active ? "rgba(125, 211, 240, 0.38)" : "rgba(143, 151, 168, 0.08)";
-        ctx.lineWidth = edge.relation === "imports" ? 1.4 : 0.8;
+        ctx.strokeStyle = active ? "rgba(125, 211, 240, 0.45)" : "rgba(143, 151, 168, 0.12)";
+        ctx.lineWidth = edge.relation === "imports" ? 1.5 : 0.8;
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);
         ctx.lineTo(b.x, b.y);
@@ -137,25 +160,30 @@ export function GraphCanvas({
 
       for (const node of body) {
         const active = !hi || hi.has(node.id) || node.id === sel;
-        const color = PALETTE[(node.community_id || 0) % PALETTE.length];
-        const r = 5 + Math.min(14, (node.pagerank || 0) * 140 + Math.log2((node.dependents || 0) + 1));
+        const color = PALETTE[Math.abs(node.community_id ?? 0) % PALETTE.length];
+        const r = 6 + Math.min(10, Math.log2((node.dependents || 0) + 1) * 2);
         ctx.beginPath();
-        ctx.fillStyle = active ? color : "rgba(143,151,168,0.25)";
-        ctx.shadowColor = active ? color : "transparent";
-        ctx.shadowBlur = node.id === sel ? 18 : 8;
+        ctx.fillStyle = active ? color : "rgba(143,151,168,0.35)";
         ctx.arc(node.x, node.y, node.id === sel ? r + 2 : r, 0, Math.PI * 2);
         ctx.fill();
-        ctx.shadowBlur = 0;
-        if (k > 0.7 && active) {
-          ctx.fillStyle = "#f1ede4";
-          ctx.font = "11px JetBrains Mono, monospace";
+        if (k > 0.55) {
+          ctx.fillStyle = active ? "#f1ede4" : "#8f97a8";
+          ctx.font = "11px IBM Plex Mono, monospace";
           ctx.fillText(node.name, node.x + r + 4, node.y + 4);
         }
       }
       ctx.restore();
-      if (running) raf = requestAnimationFrame(tick);
     };
-    tick();
+
+    const schedule = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(paint);
+    };
+    paintRef.current = schedule;
+
+    const ro = new ResizeObserver(() => schedule());
+    ro.observe(canvas);
+    schedule();
 
     const toWorld = (ev: PointerEvent) => {
       const rect = canvas.getBoundingClientRect();
@@ -168,63 +196,55 @@ export function GraphCanvas({
 
     const onDown = (ev: PointerEvent) => {
       const p = toWorld(ev);
-      const hit = [...sim.current].reverse().find((n) => {
-        const r = 12 + Math.min(14, (n.pagerank || 0) * 120);
-        const dx = n.x - p.x;
-        const dy = n.y - p.y;
-        return dx * dx + dy * dy < r * r;
+      const hit = [...laid.current].reverse().find((n) => {
+        const r = 14 + Math.min(10, Math.log2((n.dependents || 0) + 1) * 2);
+        return (n.x - p.x) ** 2 + (n.y - p.y) ** 2 < r * r;
       });
-      if (hit) {
-        camera.current.grabbed = hit;
-        selectRef.current(hit.id);
-      } else {
-        camera.current.drag = true;
-      }
+      if (hit) selectRef.current(hit.id);
+      camera.current.drag = !hit;
       camera.current.lastX = ev.clientX;
       camera.current.lastY = ev.clientY;
       canvas.setPointerCapture(ev.pointerId);
     };
     const onMove = (ev: PointerEvent) => {
-      const dx = ev.clientX - camera.current.lastX;
-      const dy = ev.clientY - camera.current.lastY;
+      if (!camera.current.drag) return;
+      camera.current.x += ev.clientX - camera.current.lastX;
+      camera.current.y += ev.clientY - camera.current.lastY;
       camera.current.lastX = ev.clientX;
       camera.current.lastY = ev.clientY;
-      if (camera.current.grabbed) {
-        const p = toWorld(ev);
-        camera.current.grabbed.x = p.x;
-        camera.current.grabbed.y = p.y;
-        camera.current.grabbed.vx = 0;
-        camera.current.grabbed.vy = 0;
-      } else if (camera.current.drag) {
-        camera.current.x += dx;
-        camera.current.y += dy;
-      }
+      schedule();
     };
     const onUp = () => {
       camera.current.drag = false;
-      camera.current.grabbed = null;
     };
     const onWheel = (ev: WheelEvent) => {
       ev.preventDefault();
-      const factor = ev.deltaY > 0 ? 0.92 : 1.08;
-      camera.current.k = Math.min(3, Math.max(0.35, camera.current.k * factor));
+      camera.current.k = Math.min(2.8, Math.max(0.4, camera.current.k * (ev.deltaY > 0 ? 0.92 : 1.08)));
+      schedule();
     };
 
     canvas.addEventListener("pointerdown", onDown);
     canvas.addEventListener("pointermove", onMove);
     canvas.addEventListener("pointerup", onUp);
+    canvas.addEventListener("pointercancel", onUp);
     canvas.addEventListener("wheel", onWheel, { passive: false });
 
     return () => {
-      running = false;
+      alive = false;
       cancelAnimationFrame(raf);
-      window.removeEventListener("resize", resize);
+      ro.disconnect();
       canvas.removeEventListener("pointerdown", onDown);
       canvas.removeEventListener("pointermove", onMove);
       canvas.removeEventListener("pointerup", onUp);
+      canvas.removeEventListener("pointercancel", onUp);
       canvas.removeEventListener("wheel", onWheel);
+      void alive;
     };
   }, [nodeKey]);
+
+  useEffect(() => {
+    paintRef.current();
+  }, [selected, highlight, nodeKey]);
 
   return <canvas ref={canvasRef} role="img" aria-label="Repository architecture map" />;
 }
