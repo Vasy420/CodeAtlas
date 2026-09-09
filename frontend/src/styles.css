@@ -471,7 +471,8 @@ a:hover {
   overflow: auto;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: rgba(18, 24, 38, 0.7);
+  background: #121826;
+  color: var(--text);
   padding: 14px;
 }
 
@@ -618,17 +619,40 @@ a:hover {
   list-style: none;
   margin: 0;
   padding: 0 0 0 12px;
+  color: var(--text);
 }
 
 .tree > li {
   list-style: none;
 }
 
+.tree button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  cursor: pointer;
+  padding: 6px 4px;
+  min-height: 36px;
+  border-radius: 6px;
+}
+
+.tree button:hover {
+  background: var(--cyan-dim);
+  color: var(--cyan);
+}
+
+.tree .path {
+  color: inherit;
+}
+
 .tree-dir {
   font-family: var(--mono);
   font-size: 13px;
   color: var(--amber);
-  padding: 4px 0;
+  padding: 6px 0 2px;
 }
 
 .menu-btn {
