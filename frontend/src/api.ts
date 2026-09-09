@@ -1,4 +1,13 @@
-import type { Briefing, ImpactResult, Project, Sample, GraphEdge, GraphNode } from "./types";
+import type {
+  Briefing,
+  CommitDetail,
+  CommitList,
+  ImpactResult,
+  Project,
+  Sample,
+  GraphEdge,
+  GraphNode,
+} from "./types";
 
 const BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 
@@ -70,4 +79,10 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ seed, depth, include_callees }),
     }),
+  commits: (id: string) => request<CommitList>(`/api/projects/${id}/commits`),
+  commit: (id: string, sha: string) => request<CommitDetail>(`/api/projects/${id}/commits/${sha}`),
+  compare: (id: string, base: string, head: string) =>
+    request<CommitDetail>(
+      `/api/projects/${id}/compare?base=${encodeURIComponent(base)}&head=${encodeURIComponent(head)}`,
+    ),
 };

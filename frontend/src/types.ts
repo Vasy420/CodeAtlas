@@ -103,3 +103,31 @@ export interface Sample {
   name: string;
   blurb: string;
 }
+
+export interface GitCommit {
+  sha: string;
+  short: string;
+  author: string;
+  date: string;
+  subject: string;
+}
+
+export interface CommitFile {
+  path: string;
+  status: string;
+  label: string;
+  node_id: string;
+}
+
+export interface CommitDetail {
+  available: boolean;
+  commit?: GitCommit;
+  files: CommitFile[];
+  stats: { added: number; modified: number; deleted: number; renamed: number; other: number; total: number };
+}
+
+export interface CommitList {
+  available: boolean;
+  reason: string | null;
+  commits: GitCommit[];
+}

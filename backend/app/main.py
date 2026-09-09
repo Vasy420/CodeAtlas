@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.config import DATA_DIR, WORKSPACES_DIR, cors_origins
 from app.db import get_db, init_db
 from app.models import GraphEdge, GraphNode, Project
+from app.analyzer import gitlog
 from app.services import (
     create_project,
     impact_for,
@@ -201,12 +202,12 @@ def get_node(project_id: str, key: str, db: Session = Depends(get_db)) -> dict:
         raise HTTPException(404, "Node not found")
     incoming = (
         db.query(GraphEdge)
-        .filter(GraphEdge.project_id == project_id, GraphEdge.target_key == node_key)
+        .filter(GraphEdge.project_id == project_id, GraphEdge.target_key == key)
         .all()
     )
     outgoing = (
         db.query(GraphEdge)
-        .filter(GraphEdge.project_id == project_id, GraphEdge.source_key == node_key)
+        .filter(GraphEdge.project_id == project_id, GraphEdge.source_key == key)
         .all()
     )
     snippet = _read_snippet(db, project_id, node)
@@ -216,6 +217,41 @@ def get_node(project_id: str, key: str, db: Session = Depends(get_db)) -> dict:
         "outgoing": [serialize_edge(e) for e in outgoing],
         "snippet": snippet,
     }
+
+
+@app.get("/api/projects/{project_id}/commits")
+def get_commits(project_id: str, db: Session = Depends(get_db)) -> dict:
+    project = db.get(Project, project_id)
+    if not project:
+        raise HTTPException(404, "Project not found")
+    return gitlog.list_commits(Path(project.workspace_path))
+
+
+@app.get("/api/projects/{project_id}/commits/{sha}")
+def get_commit(project_id: str, sha: str, db: Session = Depends(get_db)) -> dict:
+    project = db.get(Project, project_id)
+    if not project:
+        raise HTTPException(404, "Project not found")
+    try:
+        return gitlog.commit_changes(Path(project.workspace_path), sha)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.get("/api/projects/{project_id}/compare")
+def get_compare(
+    project_id: str,
+    base: str = Query(...),
+    head: str = Query(...),
+    db: Session = Depends(get_db),
+) -> dict:
+    project = db.get(Project, project_id)
+    if not project:
+        raise HTTPException(404, "Project not found")
+    try:
+        return gitlog.compare_commits(Path(project.workspace_path), base, head)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @app.post("/api/projects/{project_id}/impact")

@@ -1,11 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Map, Orbit, Radar } from "lucide-react";
+import { GitCommitHorizontal, Map, Orbit, Radar } from "lucide-react";
 import { api } from "../api";
 import { Brand } from "../components/Brand";
 import { GraphCanvas } from "../components/GraphCanvas";
 import { LoadingScreen } from "../components/LoadingScreen";
-import type { Briefing, GraphEdge, GraphNode, ImpactResult, Project, StructureNode } from "../types";
+import type {
+  Briefing,
+  CommitDetail,
+  CommitList,
+  GraphEdge,
+  GraphNode,
+  ImpactResult,
+  Project,
+  StructureNode,
+} from "../types";
 
 const STAGES = ["ingest", "walk", "extract", "graph", "briefing", "ready"];
 
@@ -86,6 +95,9 @@ export function ProjectPage() {
             <NavLink className={tab === "impact" ? "active" : ""} to={`?tab=impact`}>
               <Radar size={16} /> Impact
             </NavLink>
+            <NavLink className={tab === "history" ? "active" : ""} to={`?tab=history`}>
+              <GitCommitHorizontal size={16} /> History
+            </NavLink>
           </nav>
         </aside>
         <main className="page">
@@ -98,9 +110,18 @@ export function ProjectPage() {
               setParams({ tab: "impact", seed });
             }} />
           )}
-          {ready && tab === "map" && <MapView projectId={id} briefing={briefing} />}
+          {ready && tab === "map" && (
+            <MapView projectId={id} briefing={briefing} commitSha={params.get("commit")} />
+          )}
           {ready && tab === "impact" && (
             <ImpactView projectId={id} initialSeed={params.get("seed")} />
+          )}
+          {ready && tab === "history" && (
+            <HistoryView
+              projectId={id}
+              onShowOnMap={(sha) => setParams({ tab: "map", commit: sha })}
+              onImpact={(seed) => setParams({ tab: "impact", seed })}
+            />
           )}
         </main>
       </div>
@@ -316,13 +337,22 @@ function TreeNode({
   );
 }
 
-function MapView({ projectId, briefing }: { projectId: string; briefing: Briefing | null }) {
+function MapView({
+  projectId,
+  briefing,
+  commitSha,
+}: {
+  projectId: string;
+  briefing: Briefing | null;
+  commitSha: string | null;
+}) {
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [edges, setEdges] = useState<GraphEdge[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<Awaited<ReturnType<typeof api.node>> | null>(null);
   const [q, setQ] = useState("");
   const [kind, setKind] = useState("file");
+  const [changedIds, setChangedIds] = useState<Set<string> | undefined>(undefined);
   const clusterLabels = useMemo(() => {
     const labels: Record<number, string> = {};
     for (const c of briefing?.clusters || []) labels[c.id] = c.label;
@@ -339,15 +369,29 @@ function MapView({ projectId, briefing }: { projectId: string; briefing: Briefin
   }, [projectId, kind]);
 
   useEffect(() => {
-    if (!selected) return;
+    if (!selected) {
+      setDetail(null);
+      return;
+    }
     api.node(projectId, selected).then(setDetail).catch(() => setDetail(null));
   }, [projectId, selected]);
 
+  useEffect(() => {
+    if (!commitSha) {
+      setChangedIds(undefined);
+      return;
+    }
+    api.commit(projectId, commitSha).then((detail) => {
+      setChangedIds(new Set(detail.files.map((f) => f.node_id)));
+    }).catch(() => setChangedIds(undefined));
+  }, [projectId, commitSha]);
+
   const filteredHighlight = useMemo(() => {
+    if (changedIds && changedIds.size) return changedIds;
     if (!q.trim()) return undefined;
     const needle = q.toLowerCase();
     return new Set(nodes.filter((n) => n.path.toLowerCase().includes(needle) || n.name.toLowerCase().includes(needle)).map((n) => n.id));
-  }, [q, nodes]);
+  }, [q, nodes, changedIds]);
 
   return (
     <div>
@@ -355,6 +399,11 @@ function MapView({ projectId, briefing }: { projectId: string; briefing: Briefin
       <h2 style={{ fontFamily: "var(--serif)", fontSize: 36, margin: "8px 0 16px" }}>
         Structure and clusters
       </h2>
+      {commitSha && (
+        <p className="hint">
+          Highlighting files changed in commit {commitSha.slice(0, 7)}. Other nodes are dimmed.
+        </p>
+      )}
       <div className="map-wrap map-wrap-arch">
         <aside className="arch-pane">
           <h2>Clusters</h2>
@@ -599,6 +648,135 @@ function ImpactView({ projectId, initialSeed }: { projectId: string; initialSeed
                 </tbody>
               </table>
             </aside>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function HistoryView({
+  projectId,
+  onShowOnMap,
+  onImpact,
+}: {
+  projectId: string;
+  onShowOnMap: (sha: string) => void;
+  onImpact: (seed: string) => void;
+}) {
+  const [list, setList] = useState<CommitList | null>(null);
+  const [sha, setSha] = useState<string | null>(null);
+  const [detail, setDetail] = useState<CommitDetail | null>(null);
+  const [base, setBase] = useState("");
+  const [head, setHead] = useState("");
+  const [diff, setDiff] = useState<CommitDetail | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.commits(projectId).then(setList).catch((err) => setError(err instanceof Error ? err.message : "Could not load commits"));
+  }, [projectId]);
+
+  useEffect(() => {
+    if (!sha) {
+      setDetail(null);
+      return;
+    }
+    api.commit(projectId, sha).then(setDetail).catch(() => setDetail(null));
+  }, [projectId, sha]);
+
+  const runCompare = async () => {
+    if (!base || !head) return;
+    setError(null);
+    try {
+      setDiff(await api.compare(projectId, base, head));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Compare failed");
+    }
+  };
+
+  const files = diff?.files || detail?.files || [];
+
+  return (
+    <div>
+      <div className="kicker">History</div>
+      <h2 style={{ fontFamily: "var(--serif)", fontSize: 36, margin: "8px 0 8px" }}>
+        Commits and changes
+      </h2>
+      <p className="lede">
+        See what a commit touched, then highlight those files on the architecture map.
+        Requires a Git clone (not the zip or Northstar sample).
+      </p>
+      {error && <p className="error">{error}</p>}
+      {list && !list.available && <p className="hint">{list.reason}</p>}
+      {list?.available && (
+        <>
+          <div className="panel" style={{ marginBottom: 16 }}>
+            <h2>Compare two commits</h2>
+            <div className="row" style={{ flexWrap: "wrap" }}>
+              <select className="field" value={base} onChange={(e) => setBase(e.target.value)} aria-label="Base commit">
+                <option value="">Older commit</option>
+                {(list.commits || []).map((c) => (
+                  <option key={c.sha} value={c.sha}>
+                    {c.short} {c.subject.slice(0, 48)}
+                  </option>
+                ))}
+              </select>
+              <select className="field" value={head} onChange={(e) => setHead(e.target.value)} aria-label="Head commit">
+                <option value="">Newer commit</option>
+                {(list.commits || []).map((c) => (
+                  <option key={c.sha} value={c.sha}>
+                    {c.short} {c.subject.slice(0, 48)}
+                  </option>
+                ))}
+              </select>
+              <button className="btn" type="button" disabled={!base || !head} onClick={() => void runCompare()}>
+                Compare
+              </button>
+            </div>
+          </div>
+          <div className="grid-2">
+            <div className="panel">
+              <h2>Recent commits</h2>
+              <ul className="list">
+                {list.commits.map((c) => (
+                  <li key={c.sha}>
+                    <button type="button" onClick={() => { setSha(c.sha); setDiff(null); }}>
+                      <div className="path">{c.short} · {c.date}</div>
+                      <div>{c.subject}</div>
+                      <div className="meta">{c.author}</div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="panel">
+              <h2>{diff ? "Comparison" : detail ? detail.commit?.subject : "Select a commit"}</h2>
+              {detail?.stats && !diff && (
+                <p className="meta">
+                  {detail.stats.modified} modified · {detail.stats.added} added · {detail.stats.deleted} deleted
+                </p>
+              )}
+              {diff?.stats && (
+                <p className="meta">
+                  {diff.stats.total} files between the two commits
+                </p>
+              )}
+              {sha && (
+                <button className="btn ghost" type="button" style={{ margin: "8px 0" }} onClick={() => onShowOnMap(sha)}>
+                  Show on map
+                </button>
+              )}
+              <ul className="list">
+                {files.map((f) => (
+                  <li key={f.path}>
+                    <button type="button" onClick={() => onImpact(f.node_id)}>
+                      <span className="badge">{f.label}</span>{" "}
+                      <span className="path">{f.path}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </>
       )}

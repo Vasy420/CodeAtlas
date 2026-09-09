@@ -39,7 +39,7 @@ def ingest_git(dest: Path, url: str) -> Path:
     dest.parent.mkdir(parents=True, exist_ok=True)
     try:
         subprocess.run(
-            ["git", "clone", "--depth", "1", "--single-branch", url, str(dest)],
+            ["git", "clone", "--depth", "50", "--single-branch", url, str(dest)],
             check=True,
             capture_output=True,
             text=True,
