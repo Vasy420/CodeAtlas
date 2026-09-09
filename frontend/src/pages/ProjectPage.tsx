@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { NavLink, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Map, Orbit, Radar } from "lucide-react";
 import { api } from "../api";
+import { Brand } from "../components/Brand";
 import { GraphCanvas } from "../components/GraphCanvas";
+import { LoadingScreen } from "../components/LoadingScreen";
 import type { Briefing, GraphEdge, GraphNode, ImpactResult, Project } from "../types";
 
 const STAGES = ["ingest", "walk", "extract", "graph", "briefing", "ready"];
@@ -53,11 +55,7 @@ export function ProjectPage() {
   }
 
   if (!project) {
-    return (
-      <div className="content page">
-        <p className="empty">Acquiring target…</p>
-      </div>
-    );
+    return <LoadingScreen label="Acquiring target…" />;
   }
 
   const ready = project.status === "ready";
@@ -65,10 +63,7 @@ export function ProjectPage() {
   return (
     <div className="content">
       <header className="topbar">
-        <a className="brand" href="/">
-          <span className="brand-mark">ORION</span>
-          <span className="brand-sub">cartography</span>
-        </a>
+        <Brand />
         <span className={`badge ${project.status === "failed" ? "rose" : ready ? "ok" : "cyan"}`}>
           {project.status}
         </span>
@@ -112,6 +107,10 @@ export function ProjectPage() {
 function ProgressView({ project }: { project: Project }) {
   return (
     <div className="progress-page">
+      <div className="splash-mark" style={{ width: 96, height: 96, marginBottom: 16 }}>
+        <span className="splash-ring" aria-hidden="true" />
+        <img src="/logo.png" alt="" width={72} height={72} style={{ width: 72, height: 72, borderRadius: 16 }} />
+      </div>
       <div className="kicker">Pipeline</div>
       <h2 style={{ fontFamily: "var(--serif)", fontSize: 40, margin: "8px 0 12px" }}>
         Charting {project.name}
