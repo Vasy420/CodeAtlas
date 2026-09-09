@@ -639,6 +639,26 @@ a:hover {
   padding: 10px 14px;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.topbar-actions a {
+  color: var(--muted);
+  text-decoration: none;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+}
+
+.topbar-actions a:hover {
+  color: var(--text);
+}
+
 .product-hero {
   display: grid;
   grid-template-columns: 1.05fr 0.95fr;

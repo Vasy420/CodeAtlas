@@ -56,8 +56,8 @@ export function AppHome() {
       {busy && <LoadingScreen label="Opening the repository…" />}
 
       <header className="topbar">
-        <Brand to="/app" />
-        <nav className="top-links">
+        <Brand to="/" />
+        <nav className="topbar-actions">
           <Link to="/">Product</Link>
         </nav>
       </header>

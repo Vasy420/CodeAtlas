@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { NavLink, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, NavLink, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Map, Orbit, Radar } from "lucide-react";
 import { api } from "../api";
 import { Brand } from "../components/Brand";
@@ -63,10 +63,14 @@ export function ProjectPage() {
   return (
     <div className="content">
       <header className="topbar">
-        <Brand to="/app" />
-        <span className={`badge ${project.status === "failed" ? "rose" : ready ? "ok" : "cyan"}`}>
-          {project.status}
-        </span>
+        <Brand to="/" />
+        <nav className="topbar-actions">
+          <Link to="/">Product</Link>
+          <Link to="/app">App</Link>
+          <span className={`badge ${project.status === "failed" ? "rose" : ready ? "ok" : "cyan"}`}>
+            {project.status}
+          </span>
+        </nav>
       </header>
       <div className="project-layout">
         <aside className="sidenav">
