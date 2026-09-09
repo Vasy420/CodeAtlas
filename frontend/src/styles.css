@@ -860,57 +860,6 @@ a:hover {
   height: auto;
 }
 
-.hero-hotspots {
-  background: transparent;
-}
-
-.hero-stage {
-  position: relative;
-  display: block;
-}
-
-.hero-stage img {
-  pointer-events: none;
-}
-
-.hotspot {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  box-shadow: none;
-  padding: 0;
-  cursor: pointer;
-  min-height: 0;
-  aspect-ratio: 1;
-  height: auto;
-}
-
-.hotspot:hover,
-.hotspot:focus-visible {
-  outline: none;
-  background: transparent;
-  box-shadow: none;
-}
-
-.hero-caption {
-  border-top: 1px solid var(--line);
-  padding: 10px 14px 12px;
-}
-
-.hero-caption p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.hero-caption strong {
-  font-family: var(--mono);
-  color: var(--text);
-  margin-right: 6px;
-}
-
 .band {
   max-width: 1120px;
   margin: 0 auto;

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { GitBranch, Map, Radar } from "lucide-react";
 import { Brand } from "../components/Brand";
-import { InteractiveHero } from "../components/InteractiveHero";
 
 export function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -57,7 +56,9 @@ export function Home() {
             </Link>
           </div>
         </div>
-        <InteractiveHero />
+        <figure className="hero-art">
+          <img src="/hero.jpg" alt="Architecture map of a software repository" />
+        </figure>
       </section>
 
       <section className="band" id="product">
