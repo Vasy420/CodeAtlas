@@ -861,7 +861,7 @@ a:hover {
 }
 
 .hero-hotspots {
-  background: #07090f;
+  background: transparent;
 }
 
 .hero-stage {
@@ -876,9 +876,10 @@ a:hover {
 .hotspot {
   position: absolute;
   transform: translate(-50%, -50%);
+  border: 0;
   border-radius: 50%;
-  border: 1px solid transparent;
   background: transparent;
+  box-shadow: none;
   padding: 0;
   cursor: pointer;
   min-height: 0;
@@ -887,43 +888,10 @@ a:hover {
 }
 
 .hotspot:hover,
-.hotspot.on,
 .hotspot:focus-visible {
-  border-color: rgba(125, 211, 240, 0.85);
-  box-shadow:
-    0 0 0 6px rgba(125, 211, 240, 0.12),
-    0 0 28px rgba(232, 184, 109, 0.35);
-  background: rgba(125, 211, 240, 0.08);
   outline: none;
-}
-
-.hotspot.related {
-  border-color: rgba(232, 184, 109, 0.45);
-  box-shadow: 0 0 0 4px rgba(232, 184, 109, 0.1);
-}
-
-.hero-tip {
-  position: absolute;
-  transform: translate(-50%, -110%);
-  width: min(240px, 70%);
-  background: rgba(8, 11, 18, 0.92);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 10px 12px;
-  pointer-events: none;
-  z-index: 2;
-}
-
-.hero-tip strong {
-  display: block;
-  font-family: var(--mono);
-  font-size: 12px;
-  margin-bottom: 4px;
-}
-
-.hero-tip span {
-  color: var(--muted);
-  font-size: 12px;
+  background: transparent;
+  box-shadow: none;
 }
 
 .hero-caption {
@@ -935,6 +903,12 @@ a:hover {
   margin: 0;
   color: var(--muted);
   font-size: 13px;
+}
+
+.hero-caption strong {
+  font-family: var(--mono);
+  color: var(--text);
+  margin-right: 6px;
 }
 
 .band {
