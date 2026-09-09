@@ -860,83 +860,81 @@ a:hover {
   height: auto;
 }
 
-.hero-interactive {
-  background:
-    radial-gradient(500px 240px at 70% 20%, rgba(125, 211, 240, 0.08), transparent 55%),
-    #0b0f18;
-  display: flex;
-  flex-direction: column;
+.hero-hotspots {
+  background: #07090f;
 }
 
-.hero-interactive svg {
+.hero-stage {
+  position: relative;
   display: block;
-  width: 100%;
-  height: auto;
-  min-height: 280px;
 }
 
-.hero-edge {
-  stroke: rgba(125, 211, 240, 0.22);
-  stroke-width: 1.4;
+.hero-stage img {
+  pointer-events: none;
 }
 
-.hero-edge.on {
-  stroke: rgba(125, 211, 240, 0.7);
-  stroke-width: 1.8;
-}
-
-.hero-edge.blast {
-  stroke: rgba(232, 184, 109, 0.85);
-  stroke-width: 2;
-}
-
-.hero-node {
+.hotspot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 0;
   cursor: pointer;
+  min-height: 0;
+  aspect-ratio: 1;
+  height: auto;
+}
+
+.hotspot:hover,
+.hotspot.on,
+.hotspot:focus-visible {
+  border-color: rgba(125, 211, 240, 0.85);
+  box-shadow:
+    0 0 0 6px rgba(125, 211, 240, 0.12),
+    0 0 28px rgba(232, 184, 109, 0.35);
+  background: rgba(125, 211, 240, 0.08);
   outline: none;
 }
 
-.hero-node:focus circle:not(.hero-ring) {
-  stroke: #f1ede4;
-  stroke-width: 1.5;
+.hotspot.related {
+  border-color: rgba(232, 184, 109, 0.45);
+  box-shadow: 0 0 0 4px rgba(232, 184, 109, 0.1);
 }
 
-.hero-ring {
-  fill: none;
-  stroke: rgba(232, 184, 109, 0.55);
-  stroke-width: 1.2;
-}
-
-.hero-ring.blast {
-  stroke: rgba(125, 211, 240, 0.4);
-}
-
-.hero-label {
-  fill: #f1ede4;
-  font-size: 11px;
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
+.hero-tip {
+  position: absolute;
+  transform: translate(-50%, -110%);
+  width: min(240px, 70%);
+  background: rgba(8, 11, 18, 0.92);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
   pointer-events: none;
+  z-index: 2;
+}
+
+.hero-tip strong {
+  display: block;
+  font-family: var(--mono);
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.hero-tip span {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .hero-caption {
   border-top: 1px solid var(--line);
-  padding: 12px 16px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-height: 92px;
+  padding: 10px 14px 12px;
 }
 
-.hero-caption strong {
-  display: block;
-  font-family: var(--mono);
-  font-size: 13px;
-}
-
-.hero-caption span,
 .hero-caption p {
+  margin: 0;
   color: var(--muted);
   font-size: 13px;
-  margin: 0;
 }
 
 .band {
