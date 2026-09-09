@@ -13,6 +13,7 @@ export function Home() {
   const [error, setError] = useState<string | null>(null);
   const [samples, setSamples] = useState<Sample[]>([]);
   const [recent, setRecent] = useState<Project[]>([]);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     api.samples().then((r) => setSamples(r.samples)).catch(() => undefined);
@@ -48,10 +49,25 @@ export function Home() {
 
       <header className="topbar">
         <Brand />
-        <nav className="top-links">
-          <a href="#product">Product</a>
-          <a href="#how">How it works</a>
-          <a href="#map" className="btn">
+        <button
+          className="menu-btn"
+          type="button"
+          aria-label="Menu"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+        <nav className={`top-links ${menuOpen ? "open" : ""}`}>
+          <a href="#product" onClick={() => setMenuOpen(false)}>
+            Product
+          </a>
+          <a href="#how" onClick={() => setMenuOpen(false)}>
+            How it works
+          </a>
+          <a href="#map" className="btn" onClick={() => setMenuOpen(false)}>
             Map a repo
           </a>
         </nav>

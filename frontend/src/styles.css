@@ -39,6 +39,7 @@ body {
   font-family: var(--sans);
   font-size: 16px;
   line-height: 1.55;
+  overflow-x: hidden;
   background:
     radial-gradient(1200px 600px at 80% -10%, rgba(125, 211, 240, 0.08), transparent 50%),
     radial-gradient(900px 500px at -10% 110%, rgba(232, 184, 109, 0.07), transparent 45%),
@@ -206,10 +207,13 @@ a:hover {
 
 .field {
   flex: 1;
+  width: 100%;
   background: #0b0f18;
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 12px 14px;
+  min-height: 44px;
+  font-size: 16px;
   outline: none;
 }
 
@@ -408,9 +412,10 @@ a:hover {
   background: transparent;
   border: 0;
   border-bottom: 1px solid var(--line);
-  padding: 10px 2px;
+  padding: 12px 2px;
   color: var(--text);
   cursor: pointer;
+  min-height: 44px;
 }
 
 .list button:hover {
@@ -420,6 +425,7 @@ a:hover {
 .path {
   font-family: var(--mono);
   font-size: 13px;
+  word-break: break-word;
 }
 
 .badge {
@@ -515,8 +521,14 @@ a:hover {
 
 .table {
   width: 100%;
+  min-width: 480px;
   border-collapse: collapse;
   font-size: 14px;
+}
+
+.panel,
+.inspector {
+  overflow-x: auto;
 }
 
 .table th {
@@ -582,6 +594,28 @@ a:hover {
 .empty {
   color: var(--muted);
   padding: 24px 4px;
+}
+
+.menu-btn {
+  display: none;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+}
+
+.menu-btn span {
+  display: block;
+  width: 16px;
+  height: 1.5px;
+  background: var(--text);
 }
 
 .top-links {
@@ -779,9 +813,123 @@ a:hover {
     grid-template-columns: 1fr;
   }
 
-  .site-foot,
+  .topbar {
+    padding: 12px 16px;
+    padding-top: max(12px, env(safe-area-inset-top));
+    position: relative;
+    gap: 10px;
+  }
+
+  .brand-mark {
+    font-size: 18px;
+    letter-spacing: 0.08em;
+  }
+
+  .brand-sub {
+    display: none;
+  }
+
+  .brand-logo {
+    width: 36px;
+    height: 36px;
+  }
+
+  .menu-btn {
+    display: flex;
+  }
+
   .top-links {
-    flex-wrap: wrap;
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    padding: 8px 16px 16px;
+    background: rgba(7, 9, 15, 0.96);
+    border-bottom: 1px solid var(--line);
+    z-index: 20;
+  }
+
+  .top-links.open {
+    display: flex;
+  }
+
+  .top-links a {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  .hero {
+    padding: 32px 16px 24px;
+  }
+
+  .hero h1 {
+    font-size: clamp(32px, 10vw, 48px);
+  }
+
+  .lede {
+    font-size: 16px;
+  }
+
+  .band,
+  .recent,
+  .site-foot {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .site-foot {
+    flex-direction: column;
+    align-items: flex-start;
+    padding-bottom: max(32px, env(safe-area-inset-bottom));
+  }
+
+  .row {
+    flex-direction: column;
+  }
+
+  .ingest .btn {
+    width: 100%;
+  }
+
+  .hero-actions .btn,
+  .hero-actions .btn.ghost {
+    min-width: 0;
+  }
+
+  .project-layout {
+    min-height: auto;
+  }
+
+  .sidenav {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding: 14px 16px;
+  }
+
+  .sidenav .proj-name {
+    font-size: 22px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nav-links {
+    flex-direction: row;
+    overflow-x: auto;
+    margin-top: 12px;
+    gap: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .nav-links a {
+    min-height: 44px;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .map-wrap {
@@ -789,15 +937,44 @@ a:hover {
   }
 
   .graph-stage {
-    height: 480px;
+    height: 55dvh;
+    min-height: 280px;
   }
 
-  .hero {
-    padding-top: 40px;
+  .toolbar {
+    left: 8px;
+    right: 8px;
+    flex-wrap: wrap;
+  }
+
+  .toolbar input,
+  .toolbar select {
+    flex: 1 1 140px;
+    min-width: 0;
+    font-size: 16px;
+  }
+
+  .inspector {
+    max-height: 42dvh;
   }
 
   .page {
-    padding: 18px;
+    padding: 16px;
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+
+  .stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .splash-mark {
+    width: 120px;
+    height: 120px;
+  }
+
+  .splash-mark img {
+    width: 92px;
+    height: 92px;
   }
 }
 
