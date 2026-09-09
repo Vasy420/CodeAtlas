@@ -325,10 +325,52 @@ a:hover {
   min-height: calc(100dvh - 69px);
 }
 
+.project-layout.nav-collapsed {
+  grid-template-columns: 64px 1fr;
+}
+
 .sidenav {
   border-right: 1px solid var(--line);
   padding: 20px 16px;
   background: rgba(7, 9, 15, 0.4);
+  min-width: 0;
+}
+
+.sidebar-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.sidebar-toggle:hover {
+  background: var(--cyan-dim);
+}
+
+.nav-collapsed .sidenav {
+  padding: 12px 8px;
+}
+
+.nav-collapsed .proj-name,
+.nav-collapsed .sidenav .meta,
+.nav-collapsed .nav-links a span {
+  display: none;
+}
+
+.nav-collapsed .nav-links a {
+  justify-content: center;
+  padding: 10px;
+}
+
+.nav-collapsed .sidebar-toggle {
+  width: 100%;
 }
 
 .sidenav .proj-name {
@@ -467,6 +509,10 @@ a:hover {
   grid-template-columns: minmax(180px, 240px) 1fr minmax(200px, 280px);
 }
 
+.map-wrap-arch.arch-collapsed {
+  grid-template-columns: 1fr minmax(200px, 280px);
+}
+
 .arch-pane {
   overflow: auto;
   border: 1px solid var(--line);
@@ -474,6 +520,18 @@ a:hover {
   background: #121826;
   color: var(--text);
   padding: 14px;
+}
+
+.inspector-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.inspector-head h2 {
+  margin: 0;
 }
 
 .graph-stage {
@@ -985,8 +1043,21 @@ a:hover {
     min-width: 0;
   }
 
-  .project-layout {
+  .project-layout,
+  .project-layout.nav-collapsed {
     min-height: auto;
+    grid-template-columns: 1fr;
+  }
+
+  .nav-collapsed .proj-name,
+  .nav-collapsed .sidenav .meta,
+  .nav-collapsed .nav-links a span {
+    display: revert;
+  }
+
+  .nav-collapsed .nav-links a {
+    justify-content: flex-start;
+    padding: 10px 12px;
   }
 
   .sidenav {

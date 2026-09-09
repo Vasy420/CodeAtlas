@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { GitCommitHorizontal, Map, Orbit, Radar } from "lucide-react";
+import { GitCommitHorizontal, Map, Orbit, PanelLeftClose, PanelLeftOpen, Radar } from "lucide-react";
 import { api } from "../api";
 import { Brand } from "../components/Brand";
 import { GraphCanvas } from "../components/GraphCanvas";
@@ -26,6 +26,25 @@ export function ProjectPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [briefing, setBriefing] = useState<Briefing | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [navOpen, setNavOpen] = useState(() => {
+    try {
+      return localStorage.getItem("codeatlas-nav") !== "0";
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleNav = () => {
+    setNavOpen((open) => {
+      const next = !open;
+      try {
+        localStorage.setItem("codeatlas-nav", next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     let timer: number | undefined;
@@ -81,22 +100,31 @@ export function ProjectPage() {
           </span>
         </nav>
       </header>
-      <div className="project-layout">
+      <div className={`project-layout ${navOpen ? "" : "nav-collapsed"}`}>
         <aside className="sidenav">
+          <button
+            className="sidebar-toggle"
+            type="button"
+            aria-expanded={navOpen}
+            aria-label={navOpen ? "Minimize sidebar" : "Expand sidebar"}
+            onClick={toggleNav}
+          >
+            {navOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
+          </button>
           <h1 className="proj-name">{project.name}</h1>
           <div className="meta">{project.source_type}</div>
           <nav className="nav-links">
-            <NavLink className={tab === "briefing" ? "active" : ""} to={`?tab=briefing`}>
-              <Orbit size={16} /> Briefing
+            <NavLink className={tab === "briefing" ? "active" : ""} to={`?tab=briefing`} title="Briefing">
+              <Orbit size={16} /> <span>Briefing</span>
             </NavLink>
-            <NavLink className={tab === "map" ? "active" : ""} to={`?tab=map`}>
-              <Map size={16} /> Map
+            <NavLink className={tab === "map" ? "active" : ""} to={`?tab=map`} title="Map">
+              <Map size={16} /> <span>Map</span>
             </NavLink>
-            <NavLink className={tab === "impact" ? "active" : ""} to={`?tab=impact`}>
-              <Radar size={16} /> Impact
+            <NavLink className={tab === "impact" ? "active" : ""} to={`?tab=impact`} title="Impact">
+              <Radar size={16} /> <span>Impact</span>
             </NavLink>
-            <NavLink className={tab === "history" ? "active" : ""} to={`?tab=history`}>
-              <GitCommitHorizontal size={16} /> History
+            <NavLink className={tab === "history" ? "active" : ""} to={`?tab=history`} title="History">
+              <GitCommitHorizontal size={16} /> <span>History</span>
             </NavLink>
           </nav>
         </aside>
@@ -353,6 +381,7 @@ function MapView({
   const [q, setQ] = useState("");
   const [kind, setKind] = useState("file");
   const [changedIds, setChangedIds] = useState<Set<string> | undefined>(undefined);
+  const [archOpen, setArchOpen] = useState(true);
   const clusterLabels = useMemo(() => {
     const labels: Record<number, string> = {};
     for (const c of briefing?.clusters || []) labels[c.id] = c.label;
@@ -416,8 +445,15 @@ function MapView({
           Highlighting files changed in commit {commitSha.slice(0, 7)}. Other nodes are dimmed.
         </p>
       )}
-      <div className="map-wrap map-wrap-arch">
+      <div className={`map-wrap map-wrap-arch ${archOpen ? "" : "arch-collapsed"}`}>
+        {archOpen && (
         <aside className="arch-pane">
+          <div className="inspector-head">
+            <h2>Architecture</h2>
+            <button className="icon-btn" type="button" aria-label="Minimize architecture pane" onClick={() => setArchOpen(false)}>
+              <PanelLeftClose size={16} />
+            </button>
+          </div>
           <h2>Clusters</h2>
           <ul className="list">
             {(briefing?.clusters || []).map((c) => (
@@ -441,8 +477,14 @@ function MapView({
             ))}
           </ul>
         </aside>
+        )}
         <div className="graph-stage">
           <div className="toolbar">
+            {!archOpen && (
+              <button className="icon-btn" type="button" aria-label="Show architecture pane" onClick={() => setArchOpen(true)}>
+                <PanelLeftOpen size={16} />
+              </button>
+            )}
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
