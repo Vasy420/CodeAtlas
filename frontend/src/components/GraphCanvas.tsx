@@ -258,10 +258,16 @@ export function GraphCanvas({
 
     const hitTest = (ev: PointerEvent) => {
       const p = toWorld(ev);
-      return [...sim.current].reverse().find((n) => {
-        const r = radiusOf(n, selectedRef.current) + 8;
-        return (n.x - p.x) ** 2 + (n.y - p.y) ** 2 < r * r;
-      });
+      let best: SimNode | null = null;
+      let bestDist = 32 * 32;
+      for (const n of sim.current) {
+        const d = (n.x - p.x) ** 2 + (n.y - p.y) ** 2;
+        if (d < bestDist) {
+          bestDist = d;
+          best = n;
+        }
+      }
+      return best;
     };
 
     const onDown = (ev: PointerEvent) => {

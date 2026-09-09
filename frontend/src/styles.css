@@ -517,8 +517,13 @@ a:hover {
   overflow: auto;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: rgba(18, 24, 38, 0.7);
+  background: #121826;
+  color: var(--text);
   padding: 16px;
+}
+
+.inspector.open {
+  display: block;
 }
 
 .inspector pre,

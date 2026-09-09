@@ -393,6 +393,18 @@ function MapView({
     return new Set(nodes.filter((n) => n.path.toLowerCase().includes(needle) || n.name.toLowerCase().includes(needle)).map((n) => n.id));
   }, [q, nodes, changedIds]);
 
+  const pick = (idOrPath: string) => {
+    const match =
+      nodes.find((n) => n.id === idOrPath) ||
+      nodes.find((n) => n.path === idOrPath) ||
+      nodes.find((n) => n.id === `file:${idOrPath}`) ||
+      nodes.find((n) => n.path && idOrPath.endsWith(n.path));
+    setSelected(match?.id || idOrPath);
+    setDetail(null);
+  };
+
+  const selectedNode = (detail?.node || nodes.find((n) => n.id === selected)) ?? null;
+
   return (
     <div>
       <div className="kicker">Architecture map</div>
@@ -424,7 +436,7 @@ function MapView({
               <TreeNode
                 key={node.path || node.name}
                 node={node}
-                onOpen={(id) => setSelected(id)}
+                onOpen={pick}
               />
             ))}
           </ul>
@@ -449,41 +461,46 @@ function MapView({
             selected={selected}
             highlight={filteredHighlight}
             clusterLabels={clusterLabels}
-            onSelect={setSelected}
+            onSelect={pick}
           />
         </div>
-        <aside className="inspector">
-          {!detail && <p className="empty">Select a file in the tree or on the map.</p>}
-          {detail && (
+        <aside className={`inspector ${selected ? "open" : ""}`}>
+          {!selected && <p className="empty">Select a file in the tree or on the map.</p>}
+          {selected && selectedNode && (
             <>
-              <span className="badge cyan">{detail.node.kind}</span>
-              <h3 className="path">{detail.node.path || detail.node.qualified_name}</h3>
+              <span className="badge cyan">{selectedNode.kind}</span>
+              <h3 className="path">{selectedNode.path || selectedNode.qualified_name || selected}</h3>
               <p className="meta">
-                {detail.node.language} · {detail.node.dependents} dependents · loc {detail.node.loc}
+                {selectedNode.language} · {selectedNode.dependents} dependents · loc {selectedNode.loc}
               </p>
-              {detail.snippet && <pre className="snippet">{detail.snippet.text}</pre>}
+              {detail?.snippet && <pre className="snippet">{detail.snippet.text}</pre>}
               <h2 style={{ marginTop: 16 }}>Imports / uses</h2>
               <ul className="list">
-                {detail.outgoing.filter((e) => e.relation !== "contains").map((e, i) => (
-                  <li key={i}>
-                    <button onClick={() => setSelected(e.target)}>
-                      <span className="badge">{e.relation}</span> {e.target}
-                    </button>
-                  </li>
-                ))}
+                {(detail?.outgoing || [])
+                  .filter((e) => e.relation !== "contains")
+                  .map((e, i) => (
+                    <li key={i}>
+                      <button type="button" onClick={() => pick(e.target)}>
+                        <span className="badge">{e.relation}</span> {e.target}
+                      </button>
+                    </li>
+                  ))}
               </ul>
               <h2>Dependents</h2>
               <ul className="list">
-                {detail.incoming.filter((e) => e.relation !== "contains").map((e, i) => (
-                  <li key={i}>
-                    <button onClick={() => setSelected(e.source)}>
-                      <span className="badge">{e.relation}</span> {e.source}
-                    </button>
-                  </li>
-                ))}
+                {(detail?.incoming || [])
+                  .filter((e) => e.relation !== "contains")
+                  .map((e, i) => (
+                    <li key={i}>
+                      <button type="button" onClick={() => pick(e.source)}>
+                        <span className="badge">{e.relation}</span> {e.source}
+                      </button>
+                    </li>
+                  ))}
               </ul>
             </>
           )}
+          {selected && !selectedNode && <p className="hint">Selected {selected}</p>}
         </aside>
       </div>
     </div>

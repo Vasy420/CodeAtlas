@@ -193,11 +193,7 @@ def search_nodes(
 
 @app.get("/api/projects/{project_id}/node")
 def get_node(project_id: str, key: str, db: Session = Depends(get_db)) -> dict:
-    node = (
-        db.query(GraphNode)
-        .filter(GraphNode.project_id == project_id, GraphNode.node_key == key)
-        .first()
-    )
+    node = _lookup_node(db, project_id, key)
     if not node:
         raise HTTPException(404, "Node not found")
     incoming = (
@@ -297,17 +293,45 @@ def get_source(
     }
 
 
+def _lookup_node(db: Session, project_id: str, key: str) -> GraphNode | None:
+    key = (key or "").strip()
+    candidates = [key]
+    if key.startswith("file:"):
+        candidates.append(key[5:])
+    else:
+        candidates.append(f"file:{key}")
+    for candidate in candidates:
+        node = (
+            db.query(GraphNode)
+            .filter(GraphNode.project_id == project_id, GraphNode.node_key == candidate)
+            .first()
+        )
+        if node:
+            return node
+        node = (
+            db.query(GraphNode)
+            .filter(GraphNode.project_id == project_id, GraphNode.path == candidate)
+            .first()
+        )
+        if node:
+            return node
+    return None
+
+
 def _read_snippet(db: Session, project_id: str, node: GraphNode) -> dict | None:
-    project = db.get(Project, project_id)
-    if not project or not node.path:
+    try:
+        project = db.get(Project, project_id)
+        if not project or not node.path:
+            return None
+        root = Path(project.workspace_path)
+        target = root / node.path
+        if not target.is_file():
+            return None
+        lines = target.read_text(encoding="utf-8", errors="replace").splitlines()
+        start = node.start_line or 1
+        end = node.end_line or min(len(lines), start + 40)
+        start = max(1, start)
+        end = min(len(lines), max(start, end))
+        return {"path": node.path, "start": start, "end": end, "text": "\n".join(lines[start - 1 : end])}
+    except OSError:
         return None
-    root = Path(project.workspace_path)
-    target = root / node.path
-    if not target.is_file():
-        return None
-    lines = target.read_text(encoding="utf-8", errors="replace").splitlines()
-    start = node.start_line or 1
-    end = node.end_line or min(len(lines), start + 40)
-    start = max(1, start)
-    end = min(len(lines), max(start, end))
-    return {"path": node.path, "start": start, "end": end, "text": "\n".join(lines[start - 1 : end])}
